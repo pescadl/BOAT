@@ -7,11 +7,17 @@
 void Motor_Init(void);
 
 /******************************************************************************
- * @brief Turns the motor clockwise
+ * @brief Turns the motor to the left position
  ******************************************************************************/
-void Motor_TurnCW(void);
+void Motor_TurnLeft(void);
 
 /******************************************************************************
- * @brief Turns the motor counter-clockwise
+ * @brief Turns the motor straight
  ******************************************************************************/
-void Motor_TurnCCW(void);
+void Motor_TurnStraight(void);
+
+/******************************************************************************
+ * @brief Turns the motor to the right position
+ ******************************************************************************/
+void Motor_TurnRight(void);
+

@@ -32,8 +32,22 @@ void Boat_Process(void)
 /******************************************************************************
  * @brief Output to Boat's peripherals
  ******************************************************************************/
+static void delay(void) 
+{
+    int i;
+    while(i < 900000) 
+    {
+        i++;
+    }
+}
+
 void Boat_Output(void)
 {
-    Motor_TurnCCW();
+    Motor_TurnRight();
+    delay();
+    Motor_TurnStraight();
+    delay();
+    Motor_TurnLeft();
+    delay();
 }
 
