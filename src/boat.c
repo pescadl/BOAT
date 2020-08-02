@@ -1,12 +1,20 @@
-/*
+/******************************************************************************
  * @file boat.c
- */
+ ******************************************************************************/
 
 #include "em_device.h"
 #include "em_chip.h"
 
 #include "../inc/boat.h"
 #include "../inc/motor.h"
+#include "../inc/ldr.h"
+#include "../inc/lights.h"
+
+
+
+/******************************************************************************
+ *                                 FUNCTIONS                                  *
+ ******************************************************************************/
 
 /******************************************************************************
  * @brief Init Boat
@@ -15,6 +23,8 @@ void Boat_Init(void)
 {
     CHIP_Init();
     Motor_Init();
+    LDR_Init();
+    Lights_Init();
 }
 
 /******************************************************************************
@@ -47,10 +57,13 @@ static void delay(void)
 
 void Boat_Output(void)
 {
-    Motor_TurnRight();
-    delay();
-    Motor_TurnStraight();
-    delay();
-    Motor_TurnLeft();
-    delay();
+    // motor test
+    // Motor_TurnRight();
+    // delay();
+    // Motor_TurnStraight();
+    // delay();
+    // Motor_TurnLeft();
+    // delay();
+
+    Lights_Update(LDR_getAmbience());
 }
