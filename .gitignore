@@ -1,0 +1,12 @@
+# Ignore everything
+*
+
+# Except this file:
+!.gitignore
+
+# And everything in these folders:
+!src/
+!src/*
+
+!SimplicityStudio/
+!SimplicityStudio/*
