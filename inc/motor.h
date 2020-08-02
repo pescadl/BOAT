@@ -1,5 +1,9 @@
-#include "em_cmu.h"
-#include "em_emu.h"
+/*
+ * @file motor.h
+ */
+
+#ifndef MOTOR_H
+#define MOTOR_H
 
 /******************************************************************************
  * @brief Initializes Motor
@@ -21,3 +25,4 @@ void Motor_TurnStraight(void);
  ******************************************************************************/
 void Motor_TurnRight(void);
 
+#endif /* !MOTOR_H */

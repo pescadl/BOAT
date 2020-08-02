@@ -1,5 +1,9 @@
-#include "em_device.h"
-#include "em_chip.h"
+/*
+ * @file boat.h
+ */
+
+#ifndef BOAT_H
+#define BOAT_H
 
 /******************************************************************************
  * @brief Init Boat
@@ -21,3 +25,4 @@ void Boat_Process(void);
  ******************************************************************************/
 void Boat_Output(void);
 
+#endif /* !BOAT_H */

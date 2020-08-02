@@ -1,3 +1,9 @@
+/*
+ * @file motor.c
+ */
+
+#include "em_cmu.h"
+
 #include "../inc/motor.h"
 #include "../inc/hardware.h"
 
@@ -5,149 +11,33 @@
  * DEFINES
  ******************************************************************************/
 
-#define STATEMACHINE_SIZE 4
+#define STATOR_SM_SIZE 4
 
 
 /******************************************************************************
  * ENUMS
  ******************************************************************************/
 
-enum MOTOR_STATE
+typedef enum MOTOR_TURN_STATE
 {
-    MOTOR_LEFT,
-    MOTOR_STRAIGHT,
-    MOTOR_RIGHT
-};
+    MOTOR_TURN_LEFT,
+    MOTOR_TURN_STRAIGHT,
+    MOTOR_TURN_RIGHT
+} motor_turn_state_t;
 
 
 /******************************************************************************
  * GLOBALS
  ******************************************************************************/
 
-static int statemachine_index;
-static int motor_state;
+static motor_turn_state_t motor_turn_state;
 
+static void halfstep1(void);
+static void halfstep3(void);
+static void halfstep5(void);
+static void halfstep7(void);
 
-/******************************************************************************
- * PRIVATE FUNCTIONS
- ******************************************************************************/
-
-static void motor1_on(void)
-{
-    GPIO_PinOutSet(MOTOR_1_PORT, MOTOR_1_PIN);
-}
-
-static void motor1_off(void)
-{
-    GPIO_PinOutClear(MOTOR_1_PORT, MOTOR_1_PIN);
-}
-
-static void motor2_on(void)
-{
-    GPIO_PinOutSet(MOTOR_2_PORT, MOTOR_2_PIN);
-}
-
-static void motor2_off(void)
-{
-    GPIO_PinOutClear(MOTOR_2_PORT, MOTOR_2_PIN);
-}
-
-static void motor3_on(void)
-{
-    GPIO_PinOutSet(MOTOR_3_PORT, MOTOR_3_PIN);
-}
-
-static void motor3_off(void)
-{
-    GPIO_PinOutClear(MOTOR_3_PORT, MOTOR_3_PIN);
-}
-
-static void motor4_on(void)
-{
-    GPIO_PinOutSet(MOTOR_4_PORT, MOTOR_4_PIN);
-}
-
-static void motor4_off(void)
-{
-    GPIO_PinOutClear(MOTOR_4_PORT, MOTOR_4_PIN);
-}
-
-void initGPIO(void)
-{
-    CMU_ClockEnable(cmuClock_GPIO, true);
-
-    GPIO_PinModeSet(MOTOR_1_PORT, MOTOR_1_PIN, gpioModePushPull, 0);
-    GPIO_PinModeSet(MOTOR_2_PORT, MOTOR_2_PIN, gpioModePushPull, 0);
-    GPIO_PinModeSet(MOTOR_3_PORT, MOTOR_3_PIN, gpioModePushPull, 0);
-    GPIO_PinModeSet(MOTOR_4_PORT, MOTOR_4_PIN, gpioModePushPull, 0);
-}
-
-static void halfstep1(void)
-{
-    motor1_on();
-    motor2_off();
-    motor3_off();
-    motor4_off();
-}
-
-static void halfstep2(void)
-{
-    motor1_on();
-    motor2_on();
-    motor3_off();
-    motor4_off();
-}
-
-static void halfstep3(void)
-{
-    motor1_off();
-    motor2_on();
-    motor3_off();
-    motor4_off();
-}
-
-static void halfstep4(void)
-{
-    motor1_off();
-    motor2_on();
-    motor3_on();
-    motor4_off();
-}
-
-static void halfstep5(void)
-{
-    motor1_off();
-    motor2_off();
-    motor3_on();
-    motor4_off();
-}
-
-static void halfstep6(void)
-{
-    motor1_off();
-    motor2_off();
-    motor3_on();
-    motor4_on();
-}
-
-static void halfstep7(void)
-{
-    motor1_off();
-    motor2_off();
-    motor3_off();
-    motor4_on();
-}
-
-static void halfstep8(void)
-{
-    motor1_on();
-    motor2_off();
-    motor3_off();
-    motor4_on();
-}
-
-
-static void (*statemachine[STATEMACHINE_SIZE]) (void) = {
+static void (*stator_sm[STATOR_SM_SIZE]) (void) = {
     halfstep1,
     //halfstep2,
     halfstep3,
@@ -157,6 +47,126 @@ static void (*statemachine[STATEMACHINE_SIZE]) (void) = {
     halfstep7,
     //halfstep8
 };
+static int stator_sm_index;
+
+
+/******************************************************************************
+ * PRIVATE FUNCTIONS
+ ******************************************************************************/
+
+static void stator1On(void)
+{
+    GPIO_PinOutSet(MOTOR_STATOR_1_PORT, MOTOR_STATOR_1_PIN);
+}
+
+static void stator1Off(void)
+{
+    GPIO_PinOutClear(MOTOR_STATOR_1_PORT, MOTOR_STATOR_1_PIN);
+}
+
+static void stator2On(void)
+{
+    GPIO_PinOutSet(MOTOR_STATOR_2_PORT, MOTOR_STATOR_2_PIN);
+}
+
+static void stator2Off(void)
+{
+    GPIO_PinOutClear(MOTOR_STATOR_2_PORT, MOTOR_STATOR_2_PIN);
+}
+
+static void stator3On(void)
+{
+    GPIO_PinOutSet(MOTOR_STATOR_3_PORT, MOTOR_STATOR_3_PIN);
+}
+
+static void stator3Off(void)
+{
+    GPIO_PinOutClear(MOTOR_STATOR_3_PORT, MOTOR_STATOR_3_PIN);
+}
+
+static void stator4On(void)
+{
+    GPIO_PinOutSet(MOTOR_STATOR_4_PORT, MOTOR_STATOR_4_PIN);
+}
+
+static void stator4Off(void)
+{
+    GPIO_PinOutClear(MOTOR_STATOR_4_PORT, MOTOR_STATOR_4_PIN);
+}
+
+static void initGPIO(void)
+{
+    CMU_ClockEnable(cmuClock_GPIO, true);
+
+    GPIO_PinModeSet(MOTOR_STATOR_1_PORT, MOTOR_STATOR_1_PIN, gpioModePushPull, 0);
+    GPIO_PinModeSet(MOTOR_STATOR_2_PORT, MOTOR_STATOR_2_PIN, gpioModePushPull, 0);
+    GPIO_PinModeSet(MOTOR_STATOR_3_PORT, MOTOR_STATOR_3_PIN, gpioModePushPull, 0);
+    GPIO_PinModeSet(MOTOR_STATOR_4_PORT, MOTOR_STATOR_4_PIN, gpioModePushPull, 0);
+}
+
+static void halfstep1(void)
+{
+    stator1On();
+    stator2Off();
+    stator3Off();
+    stator4Off();
+}
+
+static void halfstep2(void)
+{
+    stator1On();
+    stator2On();
+    stator3Off();
+    stator4Off();
+}
+
+static void halfstep3(void)
+{
+    stator1Off();
+    stator2On();
+    stator3Off();
+    stator4Off();
+}
+
+static void halfstep4(void)
+{
+    stator1Off();
+    stator2On();
+    stator3On();
+    stator4Off();
+}
+
+static void halfstep5(void)
+{
+    stator1Off();
+    stator2Off();
+    stator3On();
+    stator4Off();
+}
+
+static void halfstep6(void)
+{
+    stator1Off();
+    stator2Off();
+    stator3On();
+    stator4On();
+}
+
+static void halfstep7(void)
+{
+    stator1Off();
+    stator2Off();
+    stator3Off();
+    stator4On();
+}
+
+static void halfstep8(void)
+{
+    stator1On();
+    stator2Off();
+    stator3Off();
+    stator4On();
+}
 
 // TODO: Replace dumb delay with awesome TIMER
 static void delay(void) 
@@ -169,23 +179,26 @@ static void delay(void)
 }
 
 /******************************************************************************
- * @brief Turns the motor clockwise
+ * @brief Turns the motor clockwise by one full step
  ******************************************************************************/
-static void Motor_TurnCW(void)
+static void stepCW(void)
 {
-    statemachine[statemachine_index]();
-    statemachine_index--;
-    if(statemachine_index < 0) statemachine_index = STATEMACHINE_SIZE-1;
+    stator_sm[stator_sm_index]();
+    stator_sm_index--;
+    if(stator_sm_index < 0)
+    {
+        stator_sm_index = STATOR_SM_SIZE-1;
+    }
     delay();
 }
 
 /******************************************************************************
- * @brief Turns the motor counter-clockwise
+ * @brief Turns the motor counter-clockwise by one full step
  ******************************************************************************/
-static void Motor_TurnCCW(void)
+static void stepCCW(void)
 {
-    statemachine[statemachine_index]();
-    statemachine_index = (statemachine_index + 1) % STATEMACHINE_SIZE;
+    stator_sm[stator_sm_index]();
+    stator_sm_index = (stator_sm_index + 1) % STATOR_SM_SIZE;
     delay();
 }
 
@@ -193,22 +206,24 @@ static void Motor_TurnCCW(void)
  * @brief Turns the motor to a specific angle relative to what it's already at
  * @param angle The angle to turn to. Ranges from -180 to 180
  ******************************************************************************/
-static void Motor_TurnAngle(int angle)
+static void motorTurnAngle(int angle)
 {
+    int i;
     int steps = ((2038 * 1e6) / 360 * angle) / 1e6;
+
     if (angle >= 0)
     {
-        for (int i = 0; i < steps; i++)
+        for (i = 0; i < steps; i++)
         {
-            Motor_TurnCW();
+            stepCW();
         }
     }
     else
     {
         steps *= -1;
-        for (int i = 0; i < steps; i++)
+        for (i = 0; i < steps; i++)
         {
-            Motor_TurnCCW();
+            stepCCW();
         }
     }
 }
@@ -223,25 +238,10 @@ static void Motor_TurnAngle(int angle)
  ******************************************************************************/
 void Motor_Init(void)
 {
-    statemachine_index = 0;
-    motor_state = MOTOR_STRAIGHT;
-    initGPIO();
-}
+    motor_turn_state = MOTOR_TURN_STRAIGHT;
+    stator_sm_index = 0;
 
-/******************************************************************************
- * @brief Turns the motor to the right
- ******************************************************************************/
-void Motor_TurnRight()
-{
-    if (motor_state == MOTOR_STRAIGHT)
-    {
-        Motor_TurnAngle(45);
-    }
-    else if (motor_state == MOTOR_LEFT)
-    {
-        Motor_TurnAngle(90);
-    }
-    motor_state = MOTOR_RIGHT;
+    initGPIO();
 }
 
 /******************************************************************************
@@ -249,15 +249,16 @@ void Motor_TurnRight()
  ******************************************************************************/
 void Motor_TurnLeft()
 {
-    if (motor_state == MOTOR_STRAIGHT)
+    if (motor_turn_state == MOTOR_TURN_STRAIGHT)
     {
-        Motor_TurnAngle(-45);
+        motorTurnAngle(-45);
     }
-    else if (motor_state == MOTOR_RIGHT)
+    else if (motor_turn_state == MOTOR_TURN_RIGHT)
     {
-        Motor_TurnAngle(-90);
+        motorTurnAngle(-90);
     }
-    motor_state = MOTOR_LEFT;
+
+    motor_turn_state = MOTOR_TURN_LEFT;
 }
 
 /******************************************************************************
@@ -265,13 +266,31 @@ void Motor_TurnLeft()
  ******************************************************************************/
 void Motor_TurnStraight()
 {
-    if (motor_state == MOTOR_LEFT)
+    if (motor_turn_state == MOTOR_TURN_LEFT)
     {
-        Motor_TurnAngle(45);
+        motorTurnAngle(45);
     }
-    else if (motor_state == MOTOR_RIGHT)
+    else if (motor_turn_state == MOTOR_TURN_RIGHT)
     {
-        Motor_TurnAngle(-45);
+        motorTurnAngle(-45);
     }
-    motor_state = MOTOR_STRAIGHT;
+
+    motor_turn_state = MOTOR_TURN_STRAIGHT;
+}
+
+/******************************************************************************
+ * @brief Turns the motor to the right
+ ******************************************************************************/
+void Motor_TurnRight()
+{
+    if (motor_turn_state == MOTOR_TURN_LEFT)
+    {
+        motorTurnAngle(90);
+    }
+    else if (motor_turn_state == MOTOR_TURN_STRAIGHT)
+    {
+        motorTurnAngle(45);
+    }
+
+    motor_turn_state = MOTOR_TURN_RIGHT;
 }

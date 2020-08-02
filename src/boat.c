@@ -1,3 +1,7 @@
+/*
+ * @file boat.c
+ */
+
 #include "em_device.h"
 #include "em_chip.h"
 
@@ -50,4 +54,3 @@ void Boat_Output(void)
     Motor_TurnLeft();
     delay();
 }
-
