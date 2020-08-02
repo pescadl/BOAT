@@ -1,8 +1,9 @@
 # Ignore everything
 *
 
-# Except this file:
+# Except these files:
 !.gitignore
+!README.md
 
 # And everything in these folders:
 !src/
