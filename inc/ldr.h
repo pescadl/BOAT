@@ -23,11 +23,11 @@ typedef enum ambience
  *                                 FUNCTIONS                                  *
  ******************************************************************************/
 
-void LDR_Init();
+void LDR_Init(void);
 
-ambience_t LDR_getAmbientLight();
+ambience_t LDR_getAmbientLight(void);
 
-void LDR_getState();
+void LDR_getState(void);
 
 
 

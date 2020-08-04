@@ -25,6 +25,9 @@
 #define MOTOR_STATOR_4_PORT         gpioPortE
 #define MOTOR_STATOR_4_PIN          8 
 
+#define LDR_PORT                    gpioPortA
+#define LDR_PIN                     0
+
 
 
 #endif /* !HARDWARE_H */
