@@ -8,6 +8,7 @@
 #include "../inc/boat.h"
 #include "../inc/motor.h"
 #include "../inc/ldr.h"
+#include "../inc/lights.h"
 
 
 
@@ -23,6 +24,7 @@ void Boat_Init(void)
     CHIP_Init();
     Motor_Init();
     LDR_Init();
+    Lights_Init();
 }
 
 /******************************************************************************
@@ -63,15 +65,5 @@ void Boat_Output(void)
     // Motor_TurnLeft();
     // delay();
 
-
-
-    // ldr test
-    if(LDR_getAmbientLight() == AMBIENCE_BRIGHT)
-    {
-        GPIO_PinOutSet(gpioPortA, 12);
-    }
-    else if(LDR_getAmbientLight() == AMBIENCE_DARK)
-    {
-        GPIO_PinOutClear(gpioPortA, 12);
-    }
+    Lights_Update(LDR_getAmbience());
 }

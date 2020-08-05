@@ -25,9 +25,7 @@ typedef enum ambience
 
 void LDR_Init(void);
 
-ambience_t LDR_getAmbientLight(void);
-
-void LDR_getState(void);
+ambience_t LDR_getAmbience(void);
 
 
 

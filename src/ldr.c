@@ -23,7 +23,6 @@ void initGPIO(void)
     CMU_ClockEnable(cmuClock_GPIO, true);
     
     GPIO_PinModeSet(LDR_PORT, LDR_PIN, gpioModeInput, 0);
-    GPIO_PinModeSet(gpioPortA, 12, gpioModePushPull, 0);
 }
 
 /******************************************************************************
@@ -41,8 +40,8 @@ void initACMP(void)
         acmpInputRangeFull,       // Input range from 0 to VDD
         acmpAccuracyLow,          // Low accuracy, less current usage
         acmpPowerSourceAvdd,      // Use the AVDD supply
-        acmpHysteresisLevel0,     // Use hysteresis level 0 when output is 0
-        acmpHysteresisLevel0,     // Use hysteresis level 0 when output is 1
+        acmpHysteresisLevel5,     // Use hysteresis level 5 when output is 0
+        acmpHysteresisLevel5,     // Use hysteresis level 5 when output is 1
         acmpVLPInputVADIV,        // Use VADIV as the VLP input source
         false,                    // Output 0 when ACMP is inactive
         false                     // Don't enable after init
@@ -55,7 +54,7 @@ void initACMP(void)
     ACMP_Init(ACMP0, &acmp0_init);
     
     // Configure the GPIO pins such that if PB9 is high, the output is logic high
-    ACMP_ChannelSet(ACMP0, acmpInputVBDIV, acmpInputAPORT1XCH0);
+    ACMP_ChannelSet(ACMP0, acmpInputVBDIV, LDR_APORT);
     
     ACMP_VBSetup(ACMP0, &vb_config);
     
@@ -81,9 +80,10 @@ void LDR_Init(void)
 }
 
 /******************************************************************************
- * @brief // TODO
+ * @brief Returns the ambient light based on LDR
+ * @return Ambient light
  ******************************************************************************/
-ambience_t LDR_getAmbientLight(void)
+ambience_t LDR_getAmbience(void)
 {
     if(ACMP0->STATUS & _ACMP_STATUS_ACMPOUT_MASK)
     {
