@@ -58,12 +58,12 @@ static void delay(void)
 void Boat_Output(void)
 {
     // motor test
-    // Motor_TurnRight();
-    // delay();
-    // Motor_TurnStraight();
-    // delay();
-    // Motor_TurnLeft();
-    // delay();
+    Motor_TurnRight();
+    delay();
+    Motor_TurnStraight();
+    delay();
+    Motor_TurnLeft();
+    delay();
 
     Lights_Update(LDR_getAmbience());
 }
