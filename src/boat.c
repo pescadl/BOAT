@@ -23,8 +23,8 @@ void Boat_Init(void)
 {
     CHIP_Init();
     Motor_Init();
-    LDR_Init();
-    Lights_Init();
+    //LDR_Init();
+    //Lights_Init();
 }
 
 /******************************************************************************
@@ -49,7 +49,7 @@ void Boat_Process(void)
 static void delay(void) 
 {
     int i;
-    while(i < 900000) 
+    while(i < 2500000) 
     {
         i++;
     }
@@ -65,5 +65,5 @@ void Boat_Output(void)
     Motor_TurnLeft();
     delay();
 
-    Lights_Update(LDR_getAmbience());
+    //Lights_Update(LDR_getAmbience());
 }
