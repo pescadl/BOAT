@@ -2,8 +2,8 @@
  * @file motor.h
  ******************************************************************************/
 
-#ifndef MOTOR_H
-#define MOTOR_H
+#ifndef STEPPER_MOTOR_H
+#define STEPPER_MOTOR_H
 
 
 
@@ -12,25 +12,25 @@
  ******************************************************************************/
 
 /******************************************************************************
- * @brief Initializes Motor
+ * @brief Initializes stepper motor
  ******************************************************************************/
-void Motor_Init(void);
+void Stepper_Motor_Init(void);
 
 /******************************************************************************
  * @brief Turns the motor to the left position
  ******************************************************************************/
-void Motor_TurnLeft(void);
+void Stepper_Motor_TurnLeft(void);
 
 /******************************************************************************
  * @brief Turns the motor straight
  ******************************************************************************/
-void Motor_TurnStraight(void);
+void Stepper_Motor_TurnStraight(void);
 
 /******************************************************************************
  * @brief Turns the motor to the right position
  ******************************************************************************/
-void Motor_TurnRight(void);
+void Stepper_Motor_TurnRight(void);
 
 
 
-#endif /* !MOTOR_H */
+#endif /* !STEPPER_MOTOR_H */

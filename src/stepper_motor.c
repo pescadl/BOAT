@@ -1,12 +1,12 @@
 /******************************************************************************
- * @file motor.c
- * @brief motor driver code for a unipolar 4-phase stepper motor (28BYJ-48)
+ * @file stepper_motor.c
+ * @brief driver code for a unipolar 4-phase stepper motor (28BYJ-48)
  ******************************************************************************/
 
 #include "em_cmu.h"
 #include "em_timer.h"
 
-#include "../inc/motor.h"
+#include "../inc/stepper_motor.h"
 #include "../inc/hardware.h"
 
 
@@ -198,9 +198,9 @@ int calculateSteps(int angle)
  ******************************************************************************/
 
 /******************************************************************************
- * @brief Initializes Motor
+ * @brief Initializes stepper motor
  ******************************************************************************/
-void Motor_Init(void)
+void Stepper_Motor_Init(void)
 {
     motor_turn_state = MOTOR_TURN_STRAIGHT;
 
@@ -213,7 +213,7 @@ void Motor_Init(void)
 /******************************************************************************
  * @brief Turns the motor to the left
  ******************************************************************************/
-void Motor_TurnLeft(void)
+void Stepper_Motor_TurnLeft(void)
 {
     if (motor_turn_state == MOTOR_TURN_STRAIGHT)
     {
@@ -233,7 +233,7 @@ void Motor_TurnLeft(void)
 /******************************************************************************
  * @brief Turns the motor straight
  ******************************************************************************/
-void Motor_TurnStraight(void)
+void Stepper_Motor_TurnStraight(void)
 {
     if (motor_turn_state == MOTOR_TURN_LEFT)
     {
@@ -253,7 +253,7 @@ void Motor_TurnStraight(void)
 /******************************************************************************
  * @brief Turns the motor to the right
  ******************************************************************************/
-void Motor_TurnRight(void)
+void Stepper_Motor_TurnRight(void)
 {
     if (motor_turn_state == MOTOR_TURN_LEFT)
     {

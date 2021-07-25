@@ -6,7 +6,7 @@
 #include "em_chip.h"
 
 #include "../inc/boat.h"
-#include "../inc/motor.h"
+#include "../inc/stepper_motor.h"
 #include "../inc/ldr.h"
 #include "../inc/lights.h"
 
@@ -22,7 +22,7 @@
 void Boat_Init(void)
 {
     CHIP_Init();
-    Motor_Init();
+    Stepper_Motor_Init();
     //LDR_Init();
     //Lights_Init();
 }
@@ -58,11 +58,11 @@ static void delay(void)
 void Boat_Output(void)
 {
     // motor test
-    Motor_TurnRight();
+    Stepper_Motor_TurnRight();
     delay();
-    Motor_TurnStraight();
+    Stepper_Motor_TurnStraight();
     delay();
-    Motor_TurnLeft();
+    Stepper_Motor_TurnLeft();
     delay();
 
     //Lights_Update(LDR_getAmbience());
