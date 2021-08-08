@@ -1,22 +1,16 @@
 /******************************************************************************
- * @file main.c
+ * @file speaker.h
  ******************************************************************************/
 
-#include "../inc/boat.h"
+#ifndef SPEAKER_H
+#define SPEAKER_H
 
-
+#include "../inc/honk_waveform.h"
 
 /******************************************************************************
- * @brief main
+ *                                 FUNCTIONS                                  *
  ******************************************************************************/
-//int main(void)
-//{
-//    Boat_Init();
-//
-//    while(1)
-//    {
-//        Boat_Input();
-//        Boat_Process();
-//        Boat_Output();
-//    }
-//}
+
+void Speaker_Init(void);
+
+#endif /* !SPEAKER_H */

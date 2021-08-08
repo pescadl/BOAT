@@ -2,7 +2,9 @@
 #ifndef HONK_WAVEFORM_H_
 #define HONK_WAVEFORM_H_
 
-static const uint16_t HONK_WAVEFORM[58059] = {
+#define HONK_WAVEFORM_SIZE 58059
+#define HONK_WAVEFORM_SIZE2 2048
+static const int16_t HONK_WAVEFORM[HONK_WAVEFORM_SIZE] = {
     -12, -9, -13, -17, -7, -16, -20, -15, -15, -13, -13, -6, -7, -4, -1, -4, -2, -5, -4, -12, -5,
     -2, -5, -1, -11, -1, -3, -5, -2, -6, 0, -6, -1, -1, -2, -3, -3, 2, 3, 6, -1, 7, 4, 2, 9, 2, 9,
     9, 10, 10, 8, 12, 12, 17, 13, 17, 18, 19, 23, 19, 30, 30, 24, 36, 36, 43, 38, 38, 41, 33, 47,
