@@ -10,6 +10,19 @@
 #include "../inc/hardware.h"
 
 /******************************************************************************
+ *                                   MACROS                                   *
+ ******************************************************************************/
+
+// TODO: Calculate this number
+#define NUM_LDMA_DESCRIPTORS 3
+
+static uint16_t temp_buffer[5] = {
+  0,0,0,0,0
+};
+
+
+
+/******************************************************************************
  *                              PRIVATE FUNCTIONS                             *
  ******************************************************************************/
 
@@ -56,21 +69,41 @@ static void initVdac(void)
  ******************************************************************************/
 static void initLdma(void)
 {
-  // Descriptor loops through the sine table and outputs its values to the VDAC
-  static LDMA_Descriptor_t loopDescriptor =
-    LDMA_DESCRIPTOR_LINKREL_M2P_BYTE(&HONK_WAVEFORM[0],
-                                     &VDAC0->CH0DATA,
-                                     HONK_WAVEFORM_SIZE2,
-                                     0);
-  // Don't trigger interrupt when transfer is done
-  loopDescriptor.xfer.doneIfs = 0;
-  // Transfer halfwords (VDAC data register is 12 bits)
-  loopDescriptor.xfer.size = ldmaCtrlSizeHalf;
+  // Create the array of linked descriptors. The max transfer size is not
+  // enough to play the entire sine table so we'll link the descriptors
+  static LDMA_Descriptor_t ldmaDescriptors[NUM_LDMA_DESCRIPTORS];
+  for (int i = 0; i < NUM_LDMA_DESCRIPTORS; i++)
+  {
+    if (i != NUM_LDMA_DESCRIPTORS-1)
+    {
+      // Each descriptor links to the next one
+      ldmaDescriptors[i] = (LDMA_Descriptor_t)
+        LDMA_DESCRIPTOR_LINKREL_M2P_BYTE(&HONK_WAVEFORM[i*1], // TODO: put back to 2048
+                                         //&VDAC0->CH0DATA, // TODO: put back this value
+                                         &temp_buffer,
+                                         1, // TODO: put back to 2048
+                                         1);
+    }
+    else
+    {
+      // Except the last descriptor, which links back to the first descriptor
+      ldmaDescriptors[NUM_LDMA_DESCRIPTORS-1] = (LDMA_Descriptor_t)
+        LDMA_DESCRIPTOR_LINKREL_M2P_BYTE(&HONK_WAVEFORM[(NUM_LDMA_DESCRIPTORS-1)*1], // TODO: put back to 2048
+                                         //&VDAC0->CH0DATA, // TODO: put back this value
+                                         &temp_buffer,
+                                         1, // TODO: put back to 2048
+                                         -(NUM_LDMA_DESCRIPTORS-1));
+    }
+    // Don't trigger interrupt when transfer is done
+    ldmaDescriptors[i].xfer.doneIfs = 1; // TODO: put back to zero
+    // Transfer halfwords (VDAC data register is 12 bits)
+    ldmaDescriptors[i].xfer.size = ldmaCtrlSizeHalf;
+  }
 
-  // Transfer configuration and trigger selection
   // Trigger when VDAC0_CH0DATA is empty
   LDMA_TransferCfg_t transferConfig =
-    LDMA_TRANSFER_CFG_PERIPHERAL(ldmaPeripheralSignal_VDAC0_CH0);
+//    LDMA_TRANSFER_CFG_PERIPHERAL(ldmaPeripheralSignal_VDAC0_CH0);
+      LDMA_TRANSFER_CFG_MEMORY_LOOP(10); // TODO: remove
 
   // LDMA initialization
   LDMA_Init_t init = LDMA_INIT_DEFAULT;
@@ -78,7 +111,76 @@ static void initLdma(void)
 
   // Start the transfer
   uint32_t channelNum = 0;
-  LDMA_StartTransfer(channelNum, &transferConfig, &loopDescriptor);
+  LDMA_StartTransfer(channelNum, &transferConfig, &ldmaDescriptors[0]);
+
+  // TODO: remove
+  /* Request first transfer */
+  LDMA->SWREQ |= (1<<0);
+}
+
+/***************************************************************************//**
+ * @brief
+ *   LDMA IRQ handler.
+ ******************************************************************************/
+// TODO: remove
+void LDMA_IRQHandler( void )
+{
+  uint32_t pending;
+
+  /* Read interrupt source */
+  pending = LDMA_IntGet();
+
+  /* Clear interrupts */
+  LDMA_IntClear(pending);
+
+  /* Check for LDMA error */
+  if (pending & LDMA_IF_ERROR)
+  {
+    /* Loop here to enable the debugger to see what has happened */
+    while (1);
+  }
+
+  /* Request next transfer */
+  LDMA->SWREQ |= (1<<0);
+}
+
+void initLdma2(void)
+{
+  uint32_t i;
+
+  LDMA_Init_t init = LDMA_INIT_DEFAULT;
+  LDMA_Init( &init );
+
+  /* Use looped peripheral transfer configuration macro */
+  LDMA_TransferCfg_t periTransferTx =
+      LDMA_TRANSFER_CFG_MEMORY_LOOP(10);
+
+  /* LINK descriptor macros for looping, SINGLE descriptor macro for single transfer */
+  static LDMA_Descriptor_t descLink[3];
+  descLink[0] = (LDMA_Descriptor_t)LDMA_DESCRIPTOR_LINKREL_M2M_HALF(&HONK_WAVEFORM[0], &temp_buffer, 1, 1);
+  descLink[1] = (LDMA_Descriptor_t)LDMA_DESCRIPTOR_LINKREL_M2M_HALF(&HONK_WAVEFORM[1], &temp_buffer, 1, 1);
+  descLink[2] = (LDMA_Descriptor_t)LDMA_DESCRIPTOR_LINKREL_M2M_HALF(&HONK_WAVEFORM[2], &temp_buffer, 1, -2);
+  descLink[0].xfer.reqMode = ldmaCtrlReqModeBlock;
+  descLink[1].xfer.reqMode = ldmaCtrlReqModeBlock;
+  descLink[2].xfer.reqMode = ldmaCtrlReqModeBlock;
+
+  /* Enable looping */
+  descLink[2].xfer.decLoopCnt = 1;
+
+  /* Enable interrupts */
+  descLink[0].xfer.doneIfs = true;
+  descLink[1].xfer.doneIfs = true;
+  descLink[2].xfer.doneIfs = true;
+
+  /* Disable automatic triggers */
+  descLink[0].xfer.structReq = 0;
+  descLink[1].xfer.structReq = 0;
+  descLink[2].xfer.structReq = 0;
+
+  LDMA_StartTransfer(0, &periTransferTx, &descLink[0]);
+
+  /* Request first transfer */
+  LDMA->SWREQ |= 1;
 }
 
 /******************************************************************************
