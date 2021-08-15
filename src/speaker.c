@@ -17,11 +17,19 @@
 // this using some fancy maths
 #define MAX_XFER_COUNT ((_LDMA_CH_CTRL_XFERCNT_MASK >> _LDMA_CH_CTRL_XFERCNT_SHIFT) + 1)
 
-#define NUM_LDMA_DESCRIPTORS (NUM_LDMA_DESCRIPTORS_A + 2)
-#define NUM_LDMA_DESCRIPTORS_A (((int)(HONK_WAVEFORM_SIZE / MAX_XFER_COUNT))+1)
-#define NUM_LDMA_DESCRIPTORS_A_LOOPS 20
-#define LDMA_DESCRIPTOR_B_INDEX (NUM_LDMA_DESCRIPTORS - 2)
-#define LDMA_DESCRIPTOR_C_INDEX (NUM_LDMA_DESCRIPTORS - 1)
+// Number of iterations = (number of loops + 1)
+#define NUM_LDMA_DESCRIPTORS_B_LOOPS 0
+
+// Calculate the total number of LDMA descriptors
+#define NUM_LDMA_DESCRIPTORS (NUM_LDMA_DESCRIPTORS_B + 4)
+#define NUM_LDMA_DESCRIPTORS_B (((int)(HONK_WAVEFORM_SIZE / MAX_XFER_COUNT))+1)
+
+// Determine descriptor order
+#define LDMA_DESCRIPTOR_A_INDEX (0)
+#define LDMA_DESCRIPTOR_B_INDEX (LDMA_DESCRIPTOR_A_INDEX + 1)
+#define LDMA_DESCRIPTOR_C_INDEX (LDMA_DESCRIPTOR_B_INDEX + NUM_LDMA_DESCRIPTORS_B)
+#define LDMA_DESCRIPTOR_D_INDEX (LDMA_DESCRIPTOR_C_INDEX + 1)
+#define LDMA_DESCRIPTOR_E_INDEX (LDMA_DESCRIPTOR_D_INDEX + 1)
 
 
 /******************************************************************************
@@ -39,7 +47,7 @@ static void initVdac(void)
 
   // Initialize the VDAC
   VDAC_Init_TypeDef init = VDAC_INIT_DEFAULT;
-  init.prescaler = VDAC_PrescaleCalc(96000*8, !init.asyncClockMode, 0);
+  init.prescaler = VDAC_PrescaleCalc(48000*8, !init.asyncClockMode, 0);
   init.reference = vdacRefAvdd;
   init.refresh = vdacRefresh8;
   init.ch0ResetPre = true;
@@ -55,6 +63,7 @@ static void initVdac(void)
   VDAC0->OPA[0].TIMER &= ~(_VDAC_OPA_TIMER_SETTLETIME_MASK);
 
   // Enable VDAC channel 0
+  VDAC0->CH0DATA = 0;
   VDAC_Enable(VDAC0, 0, true);
 }
 
@@ -72,23 +81,32 @@ static void initVdac(void)
 static void initLdma(void)
 {
   // Descriptor sequence is:
-  // Loop(A0, A1, ..., An, NUM_LDMA_DESCRIPTORS_A_LOOPS), B, C
-  //  - A0 through An are for playing the honk sine wave
-  //  - We loop that for the desired loop count NUM_LDMA_DESCRIPTORS_A_LOOPS
-  //  - Then descriptor B will deactivate the VDAC
-  //  - Then descriptor C will deactivate the LDMA
+  // A, Loop(B0, B1, ..., Bn, NUM_LDMA_DESCRIPTORS_B_LOOPS), C, D, E
+  //  - A: First ramp up to VDD/2 to avoid a popping sound from the speaker
+  //  - B: B0 through Bn are for playing the honk sine wave
+  //  -    We loop that for the desired loop count NUM_LDMA_DESCRIPTORS_B_LOOPS
+  //  - C: Then ramp down to 0 to avoid a popping sound from the speaker
+  //  - D: Then descriptor D will deactivate the VDAC
+  //  - E: Then descriptor E will deactivate the LDMA
 
   // Create the array of linked descriptors
   static LDMA_Descriptor_t ldmaDescriptors[NUM_LDMA_DESCRIPTORS];
 
+  // Descriptor A: ramp up from 0V to VDD/2 to avoid speaker popping sound
+  ldmaDescriptors[LDMA_DESCRIPTOR_A_INDEX] = (LDMA_Descriptor_t)
+    LDMA_DESCRIPTOR_LINKREL_M2P_BYTE(&BEGIN_RAMP[0],
+                                     &VDAC0->CH0DATA,
+                                     BEGIN_RAMP_SIZE,
+                                     1);
+
   // The max transfer size is not enough to play the entire sine table so
   // we'll link the A-type descriptors together
-  for (int i = 0; i < NUM_LDMA_DESCRIPTORS_A; i++)
+  for (int i = 0; i < NUM_LDMA_DESCRIPTORS_B; i++)
   {
-    if (i < NUM_LDMA_DESCRIPTORS_A-1)
+    if (i < NUM_LDMA_DESCRIPTORS_B-1)
     {
       // Each descriptor links to the next one
-      ldmaDescriptors[i] = (LDMA_Descriptor_t)
+      ldmaDescriptors[LDMA_DESCRIPTOR_B_INDEX+i] = (LDMA_Descriptor_t)
         LDMA_DESCRIPTOR_LINKREL_M2P_BYTE(&HONK_WAVEFORM[i*MAX_XFER_COUNT],
                                          &VDAC0->CH0DATA,
                                          MAX_XFER_COUNT,
@@ -99,38 +117,44 @@ static void initLdma(void)
       // Except the last descriptor, which links back to the first descriptor
       const uint16_t remainingTransfers =
         HONK_WAVEFORM_SIZE - (i*MAX_XFER_COUNT);
-      ldmaDescriptors[i] = (LDMA_Descriptor_t)
+      ldmaDescriptors[LDMA_DESCRIPTOR_B_INDEX+i] = (LDMA_Descriptor_t)
         LDMA_DESCRIPTOR_LINKREL_M2P_BYTE(&HONK_WAVEFORM[i*MAX_XFER_COUNT],
                                          &VDAC0->CH0DATA,
                                          remainingTransfers,
-                                         -(NUM_LDMA_DESCRIPTORS_A-1));
+                                         -(NUM_LDMA_DESCRIPTORS_B-1));
       // The last A-type descriptor will decrease the loop count
-      ldmaDescriptors[i].xfer.decLoopCnt = 1;
+      ldmaDescriptors[LDMA_DESCRIPTOR_B_INDEX+i].xfer.decLoopCnt = 1;
     }
     // Don't trigger interrupt when transfer is done
-    ldmaDescriptors[i].xfer.doneIfs = 0;
+    ldmaDescriptors[LDMA_DESCRIPTOR_B_INDEX+i].xfer.doneIfs = 0;
     // Transfer halfwords (VDAC data register is 12 bits)
-    ldmaDescriptors[i].xfer.size = ldmaCtrlSizeHalf;
+    ldmaDescriptors[LDMA_DESCRIPTOR_B_INDEX+i].xfer.size = ldmaCtrlSizeHalf;
   }
 
-  // Set up descriptor B for deactivating the VDAC and link to the next
-  // descriptor
-  ldmaDescriptors[LDMA_DESCRIPTOR_B_INDEX] = (LDMA_Descriptor_t)
+  // Descriptor C: ramp down from VDD/2 to 0V to avoid speaker popping sound
+  ldmaDescriptors[LDMA_DESCRIPTOR_C_INDEX] = (LDMA_Descriptor_t)
+    LDMA_DESCRIPTOR_LINKREL_M2P_BYTE(&END_RAMP[0],
+                                     &VDAC0->CH0DATA,
+                                     END_RAMP_SIZE,
+                                     1);
+
+  // Descriptor D: deactivate the VDAC
+  ldmaDescriptors[LDMA_DESCRIPTOR_D_INDEX] = (LDMA_Descriptor_t)
     LDMA_DESCRIPTOR_SINGLE_WRITE(VDAC_CMD_CH0DIS,
                                  &VDAC0->CMD);
-  ldmaDescriptors[LDMA_DESCRIPTOR_B_INDEX].wri.linkMode = ldmaLinkModeRel;
-  ldmaDescriptors[LDMA_DESCRIPTOR_B_INDEX].wri.link = 1;
-  ldmaDescriptors[LDMA_DESCRIPTOR_B_INDEX].wri.linkAddr = 1*4;
+  ldmaDescriptors[LDMA_DESCRIPTOR_D_INDEX].wri.linkMode = ldmaLinkModeRel;
+  ldmaDescriptors[LDMA_DESCRIPTOR_D_INDEX].wri.link = 1;
+  ldmaDescriptors[LDMA_DESCRIPTOR_D_INDEX].wri.linkAddr = 1*4;
 
-  // Set up descriptor C for deactivating the LDMA
+  // Descriptor E: deactivate the LDMA
   // TODO: ^
-//  ldmaDescriptors[LDMA_DESCRIPTOR_C_INDEX] = (LDMA_Descriptor_t)
+//  ldmaDescriptors[LDMA_DESCRIPTOR_E_INDEX] = (LDMA_Descriptor_t)
 //      LDMA_DESCRIPTOR_SINGLE_WRITE(VDAC_CMD_CH0DIS,
 //                                   &VDAC0->CMD);
 
   // Trigger when VDAC0_CH0DATA is empty
   LDMA_TransferCfg_t transferConfig = LDMA_TRANSFER_CFG_PERIPHERAL_LOOP(
-    ldmaPeripheralSignal_VDAC0_CH0, NUM_LDMA_DESCRIPTORS_A_LOOPS);
+    ldmaPeripheralSignal_VDAC0_CH0, NUM_LDMA_DESCRIPTORS_B_LOOPS);
 
   // LDMA initialization
   LDMA_Init_t init = LDMA_INIT_DEFAULT;
